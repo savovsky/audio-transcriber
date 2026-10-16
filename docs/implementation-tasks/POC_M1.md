@@ -40,6 +40,10 @@ Closing commit: `1717812`
   subscription (~$22–40/mo at real volume); the API provider is a small bolt-on
   behind the existing interface AFTER approval. LLM cleanup/summary (POC_M2) is
   demoable NOW — the OpenRouter key is already in `.env`.
+- **Speechmatics = NO-GO** (author-tested same session via their demo on the same
+  recording): confidently wrong real words (the hardest error type to review),
+  fewer speakers detected, no usable timestamps. Fallback ladder closed —
+  ElevenLabs is the only validated diarization engine for this audio profile.
 - Deepgram code stays: it proves the provider interface is swappable.
 - Pricing research lives in the LOCAL, gitignored `docs/elevenlabs-pricing-notes.md`.
 

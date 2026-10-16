@@ -61,7 +61,7 @@ routes → pipeline → (transcription | llm | export)
 | Provider | Bulgarian | Diarization | Price/hour | Role |
 | --- | --- | --- | --- | --- |
 | **ElevenLabs Scribe v2** | Excellent (~95% on covert audio, author-tested) | Built-in | ~$0.22 | 🥇 Primary — won the POC_M1 gate; best on messy/overlapping audio |
-| **Speechmatics** | Excellent | Built-in | ~$0.38 | 🥈 Fallback 1 — strongest BG accuracy reputation |
+| Speechmatics | Readable but confidently wrong words on covert BG (gate-tested) | Built-in | ~$0.38 | ❌ Rejected — tested same session: systematic vocabulary errors, hardest error type to review |
 | Deepgram Nova-3 | Poor on covert BG audio (gate-tested) | Built-in | ~$0.31 | ❌ Rejected at POC_M1 gate — implementation kept as proof the interface is swappable |
 | AssemblyAI | Good | Built-in | ~$0.37 | Fallback 3 |
 | Google Cloud STT V2 | Good | Speaker labels | ~$0.96 | Fallback 4 (heavier GCP setup) |
