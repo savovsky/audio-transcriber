@@ -23,7 +23,8 @@ Subagents: .pi/agents/workhorse.md (flash, mechanical) + workhorse-heavy.md (pro
 state machines/DB/timestamp math) are configured for this repo — use them per
 AGENTS.md rule 5 (fully-specified briefs, agentScope "both", parallel by default).
 
-State: POC_M1 is DONE and pushed (branch POC_M1_chunking-deepgram, commit 1717812).
+State: POC_M1 is DONE and pushed (branch POC_M1_chunking-deepgram, commits 1717812 +
+6d0a912/7128f18 gate verdicts; latest: 5bc4768 workhorse subagent setup).
 Gate verdict: Deepgram NO-GO (garbled BG on covert audio), ElevenLabs Scribe GO (~95%).
 
 CONFIRMED STRATEGY (author): build the app OFFLINE against ElevenLabs WEB-EXPORT
