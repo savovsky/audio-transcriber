@@ -35,6 +35,37 @@ export interface TranscriptBlock {
   cleanedText: string | null;
 }
 
+// --- Transcription provider contract (POC_M1) ---
+// The swappable-engine boundary (architecture doc §dependency rule): every
+// transcription provider returns these shapes; the pipeline merges per-chunk
+// results into one diarized transcript with absolute timestamps.
+
+export interface TranscriptUtterance {
+  speakerIndex: number; // diarization label (0-based, consistent across chunks)
+  startSec: number; // absolute offset within the source recording
+  endSec: number;
+  text: string;
+}
+
+export interface TranscriptChunk {
+  index: number;
+  fileName: string;
+  startSec: number; // offset of this chunk within the source recording
+  durationSec: number;
+}
+
+export interface ChunkTranscription {
+  chunkIndex: number;
+  chunkStartSec: number;
+  utterances: TranscriptUtterance[]; // timestamps already absolute
+}
+
+export interface TranscriptionResult {
+  provider: string; // e.g. 'deepgram/nova-3'
+  language: string;
+  utterances: TranscriptUtterance[]; // merged across chunks, sorted by startSec
+}
+
 // The 5 cleanup-style presets (architecture doc §pipeline). Bulgarian display
 // names are finalized in POC_M2 together with the prompt texts.
 export type CleanupStyleId = 'clean-verbatim' | 'light-clean' | 'formal-style' | 'summary' | 'key-facts';

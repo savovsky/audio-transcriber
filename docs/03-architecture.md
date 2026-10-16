@@ -7,7 +7,9 @@ React + MUI (Bulgarian UI)  ──►  Node/TS backend (Fastify)  ──►  SQL
    SPA, Vite dev server            port 3001                       data/app.db (gitignored)
    port 3000, /api proxy                │
                                         ├─► Transcription API (swappable interface)
-                                        │     • v1: Deepgram Nova-3 (BG + diarization)
+                                        │     • v1: ElevenLabs Scribe (BG + diarization)
+                                        │       — web-export IMPORT until the API key lands
+                                        │     • tested & rejected: Deepgram Nova-3 (POC_M1 gate)
                                         │     • future: self-hosted WhisperX sidecar
                                         │
                                         └─► LLM cleanup via OpenRouter
@@ -28,7 +30,7 @@ audio-transcriber/
 │   └── src/
 │       ├── routes/         # sessions, blocks, speakers, export
 │       ├── pipeline/       # chunk → transcribe → clean → roles (resumable, per-chunk cache)
-│       ├── transcription/  # provider interface + deepgram.ts (swappable!)
+│       ├── transcription/  # provider interface + deepgram.ts + elevenlabs-import.ts (swappable!)
 │       ├── llm/            # openrouter.ts + cleanup-style presets + role suggestion
 │       ├── export/         # docx builder (npm "docx" package)
 │       └── db/             # better-sqlite3 schema + repositories
@@ -58,16 +60,16 @@ routes → pipeline → (transcription | llm | export)
 
 | Provider | Bulgarian | Diarization | Price/hour | Role |
 | --- | --- | --- | --- | --- |
-| **Deepgram Nova-3** | Good–Excellent | Built-in | ~$0.31 | 🥇 Primary — best price/speed/dev experience; $200 free credit, no card |
+| **ElevenLabs Scribe v2** | Excellent (~95% on covert audio, author-tested) | Built-in | ~$0.22 | 🥇 Primary — won the POC_M1 gate; best on messy/overlapping audio |
 | **Speechmatics** | Excellent | Built-in | ~$0.38 | 🥈 Fallback 1 — strongest BG accuracy reputation |
-| **ElevenLabs Scribe v2** | Excellent | Built-in | ~$0.22 | 🥉 Fallback 2 — best on messy/overlapping audio |
+| Deepgram Nova-3 | Poor on covert BG audio (gate-tested) | Built-in | ~$0.31 | ❌ Rejected at POC_M1 gate — implementation kept as proof the interface is swappable |
 | AssemblyAI | Good | Built-in | ~$0.37 | Fallback 3 |
 | Google Cloud STT V2 | Good | Speaker labels | ~$0.96 | Fallback 4 (heavier GCP setup) |
 | Azure Speech | Good | Yes | ~$1.00 | Fallback 5 |
 | WhisperX self-hosted | Good | Decent | GPU rental ~$0.40/h | Nuclear option — only if APIs are ever rejected for privacy; requires a Python sidecar behind the same interface |
 
-> Deepgram is NOT available via OpenRouter — OpenRouter proxies LLMs only. Two
-> separate API keys are required (see `02-tech-stack.md`).
+> Transcription providers are NOT available via OpenRouter — OpenRouter proxies
+> LLMs only. Separate API keys are required (see `02-tech-stack.md`).
 
 ## Pipeline design (resilient, resumable)
 
@@ -106,6 +108,7 @@ both (verbatim in italic).
 
 ## Cost estimates
 
-- Transcription: ~$0.31/audio-hour → a 3-hour recording ≈ **$0.93**.
+- Transcription: ~$0.22/audio-hour → a 3-hour recording ≈ **$0.66** (plus the
+  ElevenLabs plan that unlocks pay-as-you-go — see the local pricing-notes file).
 - LLM cleanup: **a few cents** per 3-hour recording.
 - Processing time: 3-hour file → ~2–4 min transcription + LLM pass.
