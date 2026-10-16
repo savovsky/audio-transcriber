@@ -19,6 +19,10 @@ Local-only context: docs/elevenlabs-pricing-notes.md is gitignored (pricing rese
 the real ElevenLabs web-export sample is data/jobs/1362_2025-2026-10-16T14-33-04/_1362_2025_bul.json
 (segments: text/start_time/end_time/speaker{id,name}/words[]; audio events as bracketed text).
 
+Subagents: .pi/agents/workhorse.md (flash, mechanical) + workhorse-heavy.md (pro,
+state machines/DB/timestamp math) are configured for this repo — use them per
+AGENTS.md rule 5 (fully-specified briefs, agentScope "both", parallel by default).
+
 State: POC_M1 is DONE and pushed (branch POC_M1_chunking-deepgram, commit 1717812).
 Gate verdict: Deepgram NO-GO (garbled BG on covert audio), ElevenLabs Scribe GO (~95%).
 
