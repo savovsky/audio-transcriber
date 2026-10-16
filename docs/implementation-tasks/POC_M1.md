@@ -13,7 +13,7 @@ Branch: `POC_M1_chunking-deepgram`. Scope: headless milestone — no UI work.
 | 5 | Test entry point — CLI: `npm run transcribe -w server -- <mp3> [--job <id>] [--chunk-minutes <n>]` | ✅ done |
 | 6 | **GO/NO-GO quality gate** — Deepgram run vs ElevenLabs web demo, evaluated together | ✅ done — verdict below |
 
-Closing commit: `<hash-lands-in-hash-commit>`
+Closing commit: `1717812`
 
 ## Validation so far
 
