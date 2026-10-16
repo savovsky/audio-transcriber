@@ -1,0 +1,38 @@
+# CI — Audio Transcriber gates.
+#
+# Runs every quality gate off the author's machine on a clean ubuntu host:
+# lint + tsc + vitest + client build. Trigger: PRs ONLY (same reasoning as
+# openrebar, 2026-09-24: for a solo dev the post-merge re-run is pure
+# redundancy — the PR check already runs on the exact post-merge state).
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+# New push supersedes in-flight runs of the SAME ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: Gates (lint / tsc / test / build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+      - run: npm run tsc
+      - run: npm test
+      - run: npm run build

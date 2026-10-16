@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.server.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "module": "esnext",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+
+    /* Bundler mode (tsx is the runtime — esbuild-resolution semantics) */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Workspace aliases — mirrored by tsx (tsconfig paths) and vitest.config.ts */
+    "paths": {
+      "shared": ["../shared/src/index.ts"],
+      "shared/*": ["../shared/src/*"]
+    },
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}

@@ -147,3 +147,12 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Test examples
+docs/test-examples
+
+# Local app data: sqlite db, audio files, chunk cache
+data/
+
+# Gate runner logs
+.gates/
