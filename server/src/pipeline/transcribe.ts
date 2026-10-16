@@ -47,8 +47,11 @@ export function formatTranscript(result: TranscriptionResult): string {
 // --- IO / orchestration ---
 
 export function makeJobId(inputPath: string): string {
-  const base = path
-    .basename(inputPath, path.extname(inputPath))
+  // Split on both separators ourselves: path.basename is platform-specific and
+  // would not strip a Windows-style directory on the Linux CI runner.
+  const fileName = inputPath.split(/[\\/]/).pop() ?? inputPath;
+  const base = fileName
+    .replace(/\.[^.]+$/, '')
     .replace(/[^a-zA-Z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
