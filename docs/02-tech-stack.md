@@ -22,7 +22,7 @@
 | Client routing | react-router-dom 7 | Session list ↔ session detail pages |
 | Storage | **better-sqlite3** | Embedded single-file DB; no DB server to install |
 | Audio processing | **ffmpeg-static** | Bundled FFmpeg binary — no system install; used for chunking |
-| Transcription | **@deepgram/sdk** (Nova-3) | Bulgarian ASR + speaker diarization built-in, ~$0.31/audio-hour |
+| Transcription | **ElevenLabs Scribe v2** (plain HTTP) | Won the POC_M1 gate: ~95% BG accuracy on covert audio + diarization, ~$0.22/audio-hour. Web-export import until the API key lands; Deepgram implemented but gate-rejected |
 | LLM cleanup | **OpenRouter** via plain HTTP | Model dropdown; a few cents per 3-hour session |
 | Export | **docx** (npm package) | .docx generation without Word installed |
 
@@ -30,8 +30,9 @@
 
 | Service | Purpose | Key location |
 | --- | --- | --- |
-| Deepgram | Speech-to-text + speaker diarization | `.env` → `DEEPGRAM_API_KEY` (server-only) |
+| ElevenLabs | Speech-to-text + speaker diarization (primary) | `.env` → `ELEVENLABS_API_KEY` (server-only) — added when the subscription is approved; web-export import until then |
 | OpenRouter | LLM text cleanup + speaker-role suggestions | `.env` → `OPENROUTER_API_KEY` (server-only) |
+| Deepgram | Fallback transcription engine (gate-rejected, kept swappable) | `.env` → `DEEPGRAM_API_KEY` (server-only) |
 
 Keys are loaded by the Node server via Node's native `--env-file` flag. The client
 never sees them; it talks to the server through the Vite dev proxy.

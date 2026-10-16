@@ -43,6 +43,26 @@
    (`npm run gates` = lint → tsc → vitest) run ONCE at the session/round close before
    the closing commit, never per item. Pipe noisy output through `tail`/`grep` so only
    verdict lines enter the context.
+
+   **The workhorses (`.pi/agents/`, project-local):** the orchestrator (main session)
+   writes fully-specified briefs; workhorses execute them literally — zero judgment
+   calls, they NEVER commit, they report Completed/Files/Gates/Ambiguities. Two tiers,
+   the orchestrator picks per link:
+   - `workhorse` (deepseek-v4-flash) — MECHANICAL links: by-pattern mappers, import
+     repointing, test additions from a brief, bulk exploration, batched gate digests.
+   - `workhorse-heavy` (deepseek-v4-pro) — state-machine / resumability edge cases,
+     SQLite schema work, timestamp/offset math, messy API-response shapes, debugging-
+     adjacent links — where flash's litter costs more verification than pro's tokens.
+   Delegation rules: judge every in-hand command by its FAILURE output (a red run dumps
+   thousands of lines — delegate those; a green one-liner is free to run in-hand).
+   Batch: ONE workhorse call returns ONE digest, not separate runs. Independent links
+   run PARALLEL by default (chains only for true file dependencies). Invoke with
+   `agentScope: "both"` so project agents are visible.
+   Brief discipline (OpenRebar T10b/T11 lessons): ONE workhorse call = ONE coherent
+   slice (never mix fixes with new test suites); the brief text lands in a temp file
+   the worker reads (auditable, no truncation) and that file is deleted in the closing
+   commit; the orchestrator re-verifies the briefed pins against the digest — a
+   silently skipped pin once escaped into hands-on testing there.
 6. **Answer typography — NO circled-number glyphs:** enumerations in chat answers use
    plain lettering (A. B. C. … or 1. 2. 3.), never Unicode circled numbers/letters.
    Applies to answers only; repo docs keep their own conventions.

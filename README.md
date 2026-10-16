@@ -56,8 +56,12 @@ AGENTS.md                          ← rules for AI sessions (ported from openre
 ## Session state
 
 - **Scaffold** — workspace setup, docs, toolchain, health endpoint, placeholder UI.
-- **Next:** POC_M1 — FFmpeg chunking + Deepgram engine + Bulgarian quality validation
-  on a real recording (see `docs/04-poc-milestones.md`).
+- **POC_M1 ✅** — FFmpeg chunking + Deepgram engine + CLI. **Gate verdict: Deepgram
+  NO-GO, ElevenLabs Scribe GO** (~95% BG accuracy on covert audio, author-tested).
+  Full record: `docs/implementation-tasks/POC_M1.md`.
+- **Next:** POC_M2 — ElevenLabs **web-export import adapter** + SQLite + OpenRouter
+  cleanup (5 presets) + speaker roles. Built OFFLINE against imported transcripts;
+  the ElevenLabs API key lands only after the end user approves the subscription.
 
 ## For AI sessions
 

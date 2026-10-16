@@ -5,8 +5,8 @@ start with the same prefix, e.g. `POC_M1_chunking-deepgram`, `POC_M3_transcript-
 
 | # | Milestone | Validates |
 | --- | --- | --- |
-| **POC_M1** | Server skeleton + FFmpeg chunking + Deepgram engine + test endpoint/CLI | **Bulgarian transcription + diarization quality on a REAL recording** — the go/no-go gate before any UI is built |
-| **POC_M2** | SQLite schema + full resumable pipeline + OpenRouter cleanup (5 style presets) + speaker-role suggestions | End-to-end transcript in the DB |
+| **POC_M1** ✅ | Server skeleton + FFmpeg chunking + Deepgram engine + test endpoint/CLI | **Bulgarian transcription + diarization quality on a REAL recording** — the go/no-go gate before any UI is built. **Outcome: Deepgram NO-GO, ElevenLabs GO** (see gate outcome below) |
+| **POC_M2** | ElevenLabs **web-export import adapter** + SQLite schema + full resumable pipeline + OpenRouter cleanup (5 style presets) + speaker-role suggestions | End-to-end transcript in the DB — built OFFLINE against imported web-export files (no ElevenLabs API key until the end user approves the subscription) |
 | **POC_M3** | Frontend: session list, transcript editor (dual view), audio-block sync playback | The user can review |
 | **POC_M4** | Speaker panel (roles, rename, reassign), regenerate, merge, style/model dropdowns | Full editing workflow |
 | **POC_M5** | .docx export + options dialog | Deliverable |
@@ -21,6 +21,20 @@ gitignored `docs/test-examples/` folder.
 - Quality good → continue to POC_M2 with Deepgram.
 - Quality poor → evaluate Speechmatics / ElevenLabs behind the same provider interface
   (this is exactly why the interface exists — see `03-architecture.md`).
+
+### Gate outcome (recorded in POC_M1)
+
+The real recordings turned out to be **covert/spy-grade audio** (one distant mic, noise,
+overlapping talkers) — the normal input profile, not an edge case. On that profile:
+
+- **Deepgram Nova-3 = NO-GO** — garbled Bulgarian, over-fragmented diarization.
+- **ElevenLabs Scribe = GO** — ~95% per the author's listen-along test, stable
+  diarization, word-level timestamps, audio-event tags.
+
+**Strategy confirmed by the author:** build the app offline against ElevenLabs
+**web-export imports** (no API key); the API provider lands behind the same interface
+only after the end user approves the subscription. Deepgram stays as proof the
+interface is swappable; Speechmatics remains the fallback if ElevenLabs ever fails.
 
 ## After the POC
 

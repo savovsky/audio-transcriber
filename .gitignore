@@ -156,3 +156,6 @@ data/
 
 # Gate runner logs
 .gates/
+
+# Local-only working notes (pricing research, decision scratchpads)
+docs/elevenlabs-pricing-notes.md
