@@ -15,6 +15,9 @@ Branch: `POC_M2_import-sqlite-cleanup`. Scope: headless milestone — no UI work
 | 6 | `server/src/llm/` — OpenRouter client, 5 presets (BG prompts), batched cleanup, role suggestions | ✅ done |
 | 7 | Resumable pipeline `runProcessing` (import → persist → clean → roles) + process CLI | ✅ done |
 
+Closing commit: `a10827e`; live end-to-end run verified by the author (69/69 blocks
+cleaned, 3 role suggestions: Съдия + 2× Адвокат — proposals only, resume verified).
+
 ## Design decisions (author-confirmed, discussion rounds 1–2)
 
 - **Offline strategy:** ElevenLabs web-export JSON is the only transcription input;
