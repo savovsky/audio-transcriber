@@ -15,7 +15,10 @@ accepted). Plan commit: `6f0b4ea` (author-approved).
 | 5 | SpeakerPanel + block caption/reassign | ✅ done |
 | 6 | Regenerate popover + preview/apply + merge button | ✅ done |
 | 7 | Header LLM controls + re-clean-all + summary/key-facts cards | ✅ done |
-| 8 | Full gates green once → author review → closing commits | ✅ done (gates green; awaiting approval) |
+| 8 | Full gates green once → author review → closing commits | ✅ done |
+
+Closing commit: `e65b12f` (author-approved). Next: **feedback session** (real-user
+test of the M4 workflow) — M5 planning follows after it.
 
 ## Design decisions
 
