@@ -5,7 +5,9 @@ import {
   LLM_MODEL_IDS,
   LLM_TEMPERATURE_OPTIONS,
   PER_BLOCK_CLEANUP_STYLE_IDS,
+  SESSION_STATUS_DISPLAY_NAMES,
 } from './index';
+import type { SessionStatus } from './index';
 
 describe('shared constants', () => {
   it('defines the 5 cleanup-style presets', () => {
@@ -31,5 +33,21 @@ describe('shared constants', () => {
   it('defines discrete temperature options including both defaults', () => {
     expect(LLM_TEMPERATURE_OPTIONS).toContain(0.2);
     expect(LLM_TEMPERATURE_OPTIONS).toContain(0.3);
+  });
+
+  it('has a Bulgarian display name for every session status', () => {
+    const statuses: SessionStatus[] = [
+      'uploaded',
+      'importing',
+      'transcribing',
+      'cleaning',
+      'roles',
+      'ready',
+      'failed',
+    ];
+    for (const status of statuses) {
+      expect(SESSION_STATUS_DISPLAY_NAMES[status]).toBeTruthy();
+    }
+    expect(Object.keys(SESSION_STATUS_DISPLAY_NAMES)).toHaveLength(statuses.length);
   });
 });

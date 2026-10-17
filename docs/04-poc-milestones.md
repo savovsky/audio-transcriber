@@ -6,8 +6,8 @@ start with the same prefix, e.g. `POC_M1_chunking-deepgram`, `POC_M3_transcript-
 | # | Milestone | Validates |
 | --- | --- | --- |
 | **POC_M1** ✅ | Server skeleton + FFmpeg chunking + Deepgram engine + test endpoint/CLI | **Bulgarian transcription + diarization quality on a REAL recording** — the go/no-go gate before any UI is built. **Outcome: Deepgram NO-GO, ElevenLabs GO** (see gate outcome below) |
-| **POC_M2** | ElevenLabs **web-export import adapter** + SQLite schema + full resumable pipeline + OpenRouter cleanup (5 style presets) + speaker-role suggestions | End-to-end transcript in the DB — built OFFLINE against imported web-export files (no ElevenLabs API key until the end user approves the subscription) |
-| **POC_M3** | Frontend: session list, transcript editor (dual view), audio-block sync playback | The user can review |
+| **POC_M2** ✅ | ElevenLabs **web-export import adapter** + SQLite schema + full resumable pipeline + OpenRouter cleanup (5 style presets) + speaker-role suggestions | End-to-end transcript in the DB — built OFFLINE against imported web-export files (no ElevenLabs API key until the end user approves the subscription) |
+| **POC_M3** ✅ | Frontend: session list, transcript editor (dual view), audio-block sync playback | The user can review |
 | **POC_M4** | Speaker panel (roles, rename, reassign), regenerate, merge, style/model dropdowns | Full editing workflow |
 | **POC_M5** | .docx export + options dialog | Deliverable |
 

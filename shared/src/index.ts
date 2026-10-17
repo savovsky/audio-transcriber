@@ -134,6 +134,59 @@ export const LLM_TEMPERATURE_OPTIONS: readonly number[] = [0.0, 0.2, 0.3, 0.4, 0
 export const DEFAULT_CLEANUP_TEMPERATURE = 0.2;
 export const DEFAULT_ROLES_TEMPERATURE = 0.3;
 
+// Bulgarian display names for the session status badge (list + detail pages).
+export const SESSION_STATUS_DISPLAY_NAMES: Readonly<Record<SessionStatus, string>> = {
+  uploaded: 'Качен',
+  importing: 'Импортиране',
+  transcribing: 'Транскрибиране',
+  cleaning: 'Изчистване',
+  roles: 'Разпознаване на роли',
+  ready: 'Готов',
+  failed: 'Неуспешен',
+};
+
+// --- API contracts (POC_M3) ---
+
+// GET /api/sessions — the home screen list.
+export interface SessionListItem {
+  id: string;
+  title: string;
+  referenceNumber: string | null;
+  durationSec: number | null;
+  status: SessionStatus;
+  createdAt: string;
+}
+
+export interface SessionListResponse {
+  sessions: SessionListItem[];
+}
+
+// GET /api/sessions/:id — everything the detail page needs in one payload
+// (blocks are always needed with the detail view, so no separate endpoint).
+export interface SessionDetailResponse {
+  session: Session;
+  speakers: Speaker[];
+  blocks: TranscriptBlock[];
+  audioUrl: string; // '/api/sessions/<id>/audio' — Range-streamed from the job dir
+}
+
+// PATCH /api/blocks/:id — both text layers are editable (POC_M3). Manual edits
+// deliberately do NOT touch the cleaned_* provenance columns: those describe the
+// LLM run that produced the base text (the regenerate-compare workflow is M4).
+export interface BlockUpdateRequest {
+  verbatimText?: string;
+  cleanedText?: string;
+}
+
+export interface BlockUpdateResponse {
+  block: TranscriptBlock;
+}
+
+// Error shape shared by all API routes.
+export interface ApiErrorResponse {
+  error: string;
+}
+
 // API contracts
 export interface HealthResponse {
   status: 'ok';

@@ -250,6 +250,11 @@ export class BlocksRepo {
     return rows.map(toBlock);
   }
 
+  get(id: string): TranscriptBlock | null {
+    const row = this.db.prepare('SELECT * FROM blocks WHERE id = ?').get(id) as BlockRow | undefined;
+    return row ? toBlock(row) : null;
+  }
+
   setCleaned(id: string, result: CleanedResult): void {
     this.db
       .prepare(
@@ -261,6 +266,18 @@ export class BlocksRepo {
 
   updateVerbatimText(id: string, verbatimText: string): void {
     this.db.prepare('UPDATE blocks SET verbatim_text = ? WHERE id = ?').run(verbatimText, id);
+  }
+
+  // User text edits from the UI (POC_M3): updates whichever layers are provided.
+  // The cleaned_* provenance columns are deliberately untouched — they describe
+  // the LLM run that produced the base text (see shared BlockUpdateRequest).
+  updateText(id: string, fields: { verbatimText?: string; cleanedText?: string }): void {
+    if (fields.verbatimText !== undefined) {
+      this.db.prepare('UPDATE blocks SET verbatim_text = ? WHERE id = ?').run(fields.verbatimText, id);
+    }
+    if (fields.cleanedText !== undefined) {
+      this.db.prepare('UPDATE blocks SET cleaned_text = ? WHERE id = ?').run(fields.cleanedText, id);
+    }
   }
 
   setSpeaker(id: string, speakerId: string): void {
