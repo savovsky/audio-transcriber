@@ -33,8 +33,10 @@ function HomePage() {
           {health && <Chip label='Сървър: свързан' color='success' />}
           {health && (
             <Chip
-              label={health.keysConfigured.deepgram ? 'Deepgram ключ: зададен' : 'Deepgram ключ: липсва'}
-              color={health.keysConfigured.deepgram ? 'success' : 'warning'}
+              label={
+                health.keysConfigured.elevenlabs ? 'ElevenLabs ключ: зададен' : 'ElevenLabs ключ: липсва'
+              }
+              color={health.keysConfigured.elevenlabs ? 'success' : 'warning'}
               variant='outlined'
             />
           )}

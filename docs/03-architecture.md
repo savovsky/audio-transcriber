@@ -46,12 +46,14 @@ audio-transcriber/
 ## Dependency rule (non-negotiable)
 
 ```text
-routes → pipeline → (transcription | llm | export)
+routes → pipeline → (transcription | llm | export | db)
 ```
 
 - Providers **never** import routes or each other.
+- `db/` is infrastructure used by both routes (session list) and the pipeline
+  (persisting blocks); it imports `shared` types only.
 - The pipeline talks to **interfaces only** — that is what keeps the transcription
-  engine (Deepgram ↔ WhisperX) and the LLM model swappable.
+  engine (ElevenLabs ↔ future fallbacks) and the LLM model swappable.
 - React components are dumb: they render and call the typed API client. No pipeline,
   no provider, no business logic in components.
 - Shared types live in `shared/` and are defined **before** the code that consumes them.
