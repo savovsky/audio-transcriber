@@ -50,7 +50,7 @@ describe('formatTimestamp', () => {
 describe('formatTranscript', () => {
   it('renders the readable diarized dump', () => {
     const result: TranscriptionResult = {
-      provider: 'deepgram/nova-3',
+      provider: 'elevenlabs/web-export',
       language: 'bg',
       utterances: [
         utt({ speaker: 0, span: [5, 9], text: 'здравейте' }),
@@ -58,7 +58,7 @@ describe('formatTranscript', () => {
       ],
     };
     const text = formatTranscript(result);
-    expect(text).toContain('provider: deepgram/nova-3');
+    expect(text).toContain('provider: elevenlabs/web-export');
     expect(text).toContain('[00:00:05] Speaker 0: здравейте');
     expect(text).toContain('[00:01:05] Speaker 1: добър ден');
   });

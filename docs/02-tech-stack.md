@@ -22,7 +22,7 @@
 | Client routing | react-router-dom 7 | Session list ↔ session detail pages |
 | Storage | **better-sqlite3** | Embedded single-file DB; no DB server to install |
 | Audio processing | **ffmpeg-static** | Bundled FFmpeg binary — no system install; used for chunking |
-| Transcription | **ElevenLabs Scribe v2** (plain HTTP) | Won the POC_M1 gate: ~95% BG accuracy on covert audio + diarization, ~$0.22/audio-hour. Web-export import until the API key lands; Deepgram implemented but gate-rejected |
+| Transcription | **ElevenLabs Scribe v2** (plain HTTP) | Won the POC_M1 gate: ~95% BG accuracy on covert audio + diarization, ~$0.22/audio-hour. Web-export import until the API key lands; Deepgram gate-rejected (POC_M1) and removed |
 | LLM cleanup | **OpenRouter** via plain HTTP | Model dropdown; a few cents per 3-hour session |
 | Export | **docx** (npm package) | .docx generation without Word installed |
 
@@ -32,16 +32,18 @@
 | --- | --- | --- |
 | ElevenLabs | Speech-to-text + speaker diarization (primary) | `.env` → `ELEVENLABS_API_KEY` (server-only) — added when the subscription is approved; web-export import until then |
 | OpenRouter | LLM text cleanup + speaker-role suggestions | `.env` → `OPENROUTER_API_KEY` (server-only) |
-| Deepgram | Fallback transcription engine (gate-rejected, kept swappable) | `.env` → `DEEPGRAM_API_KEY` (server-only) |
 
 Keys are loaded by the Node server via Node's native `--env-file` flag. The client
 never sees them; it talks to the server through the Vite dev proxy.
 
 ## LLM model dropdown (POC defaults)
 
-1. `google/gemini-2.0-flash-001` — default
+1. `google/gemini-2.5-flash` — default
 2. `openai/gpt-4o-mini`
-3. `anthropic/claude-3.5-haiku`
+3. `anthropic/claude-haiku-4.5`
+
+(Ids verified against the live OpenRouter catalog in POC_M2 — the original
+2.0-flash / 3.5-haiku ids are retired and return HTTP 404.)
 
 ## Dev tooling
 
@@ -59,4 +61,4 @@ never sees them; it talks to the server through the Vite dev proxy.
 
 Dependencies are added **per milestone, when wired up** — the scaffold installs only
 what the running skeleton needs (framework, toolchain, MUI). `better-sqlite3`,
-`ffmpeg-static`, `@deepgram/sdk`, and `docx` arrive with POC_M1/POC_M2.
+`ffmpeg-static`, and `docx` arrive with POC_M1/POC_M2.

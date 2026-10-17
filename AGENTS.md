@@ -72,15 +72,15 @@
 
 ## Architecture rules
 
-8. **Dependency rule:** `routes → pipeline → (transcription | llm | export)`.
+1. **Dependency rule:** `routes → pipeline → (transcription | llm | export)`.
    Providers never import routes or each other; the pipeline talks to interfaces only.
-9. **Dumb components:** React components render and call the typed API client. No
+2. **Dumb components:** React components render and call the typed API client. No
    pipeline, provider, or business logic in components.
-10. **Data model first:** shared TypeScript types in `shared/src/` are defined before
+3. **Data model first:** shared TypeScript types in `shared/src/` are defined before
     the server/client code that consumes them.
-11. **Doors stay open:** before any structural decision, check the deferred/out-of-scope
+4. **Doors stay open:** before any structural decision, check the deferred/out-of-scope
     lists in `docs/01-project-purpose.md` and `docs/04-poc-milestones.md`.
-12. **Nothing LLM-suggested is auto-applied:** speaker roles and cleanups are
+5. **Nothing LLM-suggested is auto-applied:** speaker roles and cleanups are
     proposals until the user confirms them.
 
 ## Conventions

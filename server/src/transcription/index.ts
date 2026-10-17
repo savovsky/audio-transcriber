@@ -1,14 +1,4 @@
-import type { AppConfig } from '../config';
-import { DeepgramProvider } from './deepgram';
-import type { TranscriptionProvider } from './provider';
-
-// Provider factory — the single place that picks the transcription engine.
-// Fallbacks (Speechmatics, ElevenLabs) get added here behind the interface.
-export function createTranscriptionProvider(config: AppConfig): TranscriptionProvider {
-  if (!config.deepgramApiKey) {
-    throw new Error('DEEPGRAM_API_KEY is not configured (check .env and the --env-file flag).');
-  }
-  return new DeepgramProvider(config.deepgramApiKey);
-}
-
+// Transcription provider contract — the swappable-engine boundary.
+// No API provider is wired yet: POC_M2 imports ElevenLabs web-exports offline
+// (see elevenlabs-import.ts); the ElevenLabs API provider plugs in here later.
 export type { TranscriptionProvider } from './provider';

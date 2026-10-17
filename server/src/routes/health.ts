@@ -8,7 +8,7 @@ export function registerHealthRoutes(app: FastifyInstance, config: AppConfig): v
       status: 'ok',
       service: 'audio-transcriber-server',
       keysConfigured: {
-        deepgram: config.deepgramApiKey !== null,
+        elevenlabs: config.elevenlabsApiKey !== null,
         openrouter: config.openrouterApiKey !== null,
       },
       timestamp: new Date().toISOString(),

@@ -13,7 +13,7 @@ SQLite are bundled as npm dependencies.
 
 ```bash
 npm install
-cp .env.example .env   # then fill in DEEPGRAM_API_KEY and OPENROUTER_API_KEY
+cp .env.example .env   # then fill in OPENROUTER_API_KEY (ELEVENLABS_API_KEY only once the subscription lands)
 npm run dev
 ```
 
@@ -59,9 +59,14 @@ AGENTS.md                          ← rules for AI sessions (ported from openre
 - **POC_M1 ✅** — FFmpeg chunking + Deepgram engine + CLI. **Gate verdict: Deepgram
   NO-GO, ElevenLabs Scribe GO** (~95% BG accuracy on covert audio, author-tested).
   Full record: `docs/implementation-tasks/POC_M1.md`.
-- **Next:** POC_M2 — ElevenLabs **web-export import adapter** + SQLite + OpenRouter
-  cleanup (5 presets) + speaker roles. Built OFFLINE against imported transcripts;
-  the ElevenLabs API key lands only after the end user approves the subscription.
+- **POC_M2 ✅ (pending author approval)** — ElevenLabs **web-export import** +
+  SQLite + resumable pipeline (import → clean → roles) + OpenRouter cleanup
+  (5 presets, BG prompts) + role suggestions. Deepgram code removed (gate-rejected).
+  Headless CLIs: `npm run import -w server -- <export.json> [--audio …] [--job …]`
+  and `npm run process -w server -- <export.json> [--session …] [--style …] [--model …] [--temperature …]`.
+  Full record: `docs/implementation-tasks/POC_M2.md`.
+- **Next:** POC_M3 — frontend: session list, transcript editor (dual view),
+  audio-block sync playback.
 
 ## For AI sessions
 

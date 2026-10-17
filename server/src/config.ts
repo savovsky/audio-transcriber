@@ -2,7 +2,7 @@ import path from 'node:path';
 
 export interface AppConfig {
   port: number;
-  deepgramApiKey: string | null;
+  elevenlabsApiKey: string | null;
   openrouterApiKey: string | null;
   dataDir: string;
 }
@@ -17,7 +17,7 @@ const DEFAULT_DATA_DIR = path.resolve(import.meta.dirname, '..', '..', 'data');
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     port: Number(env.PORT ?? DEFAULT_PORT),
-    deepgramApiKey: env.DEEPGRAM_API_KEY ?? null,
+    elevenlabsApiKey: env.ELEVENLABS_API_KEY ?? null,
     openrouterApiKey: env.OPENROUTER_API_KEY ?? null,
     dataDir: env.DATA_DIR ?? DEFAULT_DATA_DIR,
   };
