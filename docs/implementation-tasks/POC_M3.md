@@ -11,7 +11,18 @@ Branch: `POC_M3_transcript-editor`. Approved plan: `docs/implementation-plans/PO
 | 2 | Server routes: sessions list/detail, audio streaming (Range), blocks PATCH + repo additions + tests | ✅ done |
 | 3 | Client typed API client + session list page | ✅ done |
 | 4 | Session detail page: dual-view blocks, text editing, sync playback | ✅ done |
-| 5 | Full gates green once → author review → closing commits | ⏳ gates green, awaiting review |
+| 5 | Full gates green once → author review → closing commits | ✅ done |
+
+Closing commit: `de6ddf5` (author-approved).
+
+## Manual test assignment (author)
+
+1. Session list renders the ready session (status «Готов», duration 10:38) + server chip.
+2. Detail page: header, 3 speaker proposal chips, 69 blocks.
+3. Playback: block button plays exactly that segment (auto-pause at end), toggle, highlight.
+4. Dual view + «Дословен текст» toggle.
+5. Edits persist across reload (both layers); Escape reverts.
+6. Server down → list shows «Сървър: недостъпен» + alert.
 
 ## Design decisions
 
