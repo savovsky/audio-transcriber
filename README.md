@@ -59,14 +59,17 @@ AGENTS.md                          ← rules for AI sessions (ported from openre
 - **POC_M1 ✅** — FFmpeg chunking + Deepgram engine + CLI. **Gate verdict: Deepgram
   NO-GO, ElevenLabs Scribe GO** (~95% BG accuracy on covert audio, author-tested).
   Full record: `docs/implementation-tasks/POC_M1.md`.
-- **POC_M2 ✅ (pending author approval)** — ElevenLabs **web-export import** +
+- **POC_M2 ✅** — ElevenLabs **web-export import** +
   SQLite + resumable pipeline (import → clean → roles) + OpenRouter cleanup
   (5 presets, BG prompts) + role suggestions. Deepgram code removed (gate-rejected).
   Headless CLIs: `npm run import -w server -- <export.json> [--audio …] [--job …]`
   and `npm run process -w server -- <export.json> [--session …] [--style …] [--model …] [--temperature …]`.
   Full record: `docs/implementation-tasks/POC_M2.md`.
-- **Next:** POC_M3 — frontend: session list, transcript editor (dual view),
-  audio-block sync playback.
+- **POC_M3 ✅** — frontend: session list, transcript editor (dual verbatim/cleaned
+  view, both editable), audio-block sync playback. API: sessions list/detail,
+  blocks PATCH, Range audio streaming. Full record: `docs/implementation-tasks/POC_M3.md`.
+- **Next:** POC_M4 — speaker panel (roles/rename/reassign), per-block regenerate,
+  block merge, LLM style/model/temperature dropdowns.
 
 ## For AI sessions
 

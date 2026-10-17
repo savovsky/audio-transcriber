@@ -1,13 +1,15 @@
-import Fastify from 'fastify';
+import { buildApp } from './app';
 import { loadConfig } from './config';
-import { registerHealthRoutes } from './routes/health';
+import { openDatabase } from './db/database';
 
-const config = loadConfig();
-const app = Fastify({ logger: true });
+async function main(): Promise<void> {
+  const config = loadConfig();
+  const db = await openDatabase(config.dataDir);
+  const app = buildApp(config, db);
+  await app.listen({ port: config.port, host: '127.0.0.1' });
+}
 
-registerHealthRoutes(app, config);
-
-app.listen({ port: config.port, host: '127.0.0.1' }).catch((error: unknown) => {
-  app.log.error(error);
-  process.exit(1);
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
 });
