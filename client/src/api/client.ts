@@ -27,3 +27,13 @@ export async function patchJson<T>(url: string, body: unknown): Promise<T> {
   if (!response.ok) throw await toApiError(response);
   return (await response.json()) as T;
 }
+
+export async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) throw await toApiError(response);
+  return (await response.json()) as T;
+}

@@ -2,12 +2,30 @@ import type { FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { Session, SessionDetailResponse, SessionListResponse, Speaker, TranscriptBlock } from 'shared';
+import type {
+  Session,
+  SessionArtifactResponse,
+  SessionDetailResponse,
+  SessionListResponse,
+  SessionRecleanResponse,
+  Speaker,
+  TranscriptBlock,
+} from 'shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../app';
 import type { AppConfig } from '../config';
 import { type AppDatabase, openDatabase } from '../db/database';
 import { BlocksRepo, SessionsRepo, SpeakersRepo, makeBlockId, makeSpeakerId } from '../db/repositories';
+import type { LlmClient } from '../llm/openrouter';
+
+// Echo fake for the LLM routes: cleanup requests (marker protocol) echo back so
+// candidates parse to the verbatim text; anything else returns a canned artifact.
+const FAKE_LLM: LlmClient = {
+  chat: (options) => {
+    const user = options.messages[1].content;
+    return Promise.resolve(user.includes('<<<BLOCK') ? user : 'АРТЕФАКТ');
+  },
+};
 
 const SESSION: Session = {
   id: 'job-1',
@@ -73,7 +91,7 @@ describe('session routes', () => {
     new BlocksRepo(db).insertMany([BLOCK]);
 
     const config: AppConfig = { port: 0, elevenlabsApiKey: null, openrouterApiKey: null, dataDir: tmp };
-    app = buildApp(config, db);
+    app = buildApp(config, { db });
   });
 
   afterAll(async () => {
@@ -160,5 +178,126 @@ describe('session routes', () => {
     const res = await app.inject({ method: 'GET', url: '/api/sessions/job-evil/audio' });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: 'Invalid audio path' });
+  });
+
+  it('LLM routes answer 503 when no OpenRouter client is configured', async () => {
+    const reclean = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/reclean',
+      payload: { style: 'light-clean', model: 'm', temperature: 0.2, mode: 'start' },
+    });
+    expect(reclean.statusCode).toBe(503);
+    const artifacts = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/artifacts',
+      payload: { kind: 'summary', model: 'm', temperature: 0.2 },
+    });
+    expect(artifacts.statusCode).toBe(503);
+  });
+});
+
+// LLM-backed session routes get their own app instance (same db) with the fake.
+describe('session LLM routes (fake LLM)', () => {
+  let tmp: string;
+  let db: AppDatabase;
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    tmp = await mkdtemp(path.join(tmpdir(), 'session-llm-routes-test-'));
+    db = await openDatabase(tmp);
+    new SessionsRepo(db).upsert(SESSION);
+    new SpeakersRepo(db).upsertMany([SPEAKER]);
+    new BlocksRepo(db).insertMany([BLOCK]);
+    const config: AppConfig = { port: 0, elevenlabsApiKey: null, openrouterApiKey: null, dataDir: tmp };
+    app = buildApp(config, { db, llm: FAKE_LLM });
+  });
+
+  afterAll(async () => {
+    await app.close();
+    db.close();
+    await rm(tmp, { recursive: true, force: true });
+  });
+
+  it('POST reclean start marks all blocks pending and cleans the first batch', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/reclean',
+      payload: { style: 'formal-style', model: 'openai/gpt-4o-mini', temperature: 0.7, mode: 'start' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<SessionRecleanResponse>();
+    expect(body.total).toBe(1);
+    expect(body.remaining).toBe(0);
+    expect(body.cleanedBlocks).toHaveLength(1);
+    expect(body.cleanedBlocks[0].cleanedText).toBe('а'); // echo fake → verbatim
+    expect(body.cleanedBlocks[0].cleanedModel).toBe('openai/gpt-4o-mini');
+    expect(body.cleanedBlocks[0].cleanedStyle).toBe('formal-style');
+    expect(body.cleanedBlocks[0].cleanedTemperature).toBe(0.7);
+  });
+
+  it('POST reclean continue is a no-op when nothing is pending', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/reclean',
+      payload: { style: 'formal-style', model: 'openai/gpt-4o-mini', temperature: 0.7, mode: 'continue' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<SessionRecleanResponse>();
+    expect(body.cleanedBlocks).toHaveLength(0);
+    expect(body.remaining).toBe(0);
+  });
+
+  it('POST reclean validates input and unknown sessions', async () => {
+    const badStyle = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/reclean',
+      payload: { style: 'summary', model: 'm', temperature: 0.2, mode: 'start' },
+    });
+    expect(badStyle.statusCode).toBe(400);
+    const badMode = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/reclean',
+      payload: { style: 'light-clean', model: 'm', temperature: 0.2, mode: 'restart' },
+    });
+    expect(badMode.statusCode).toBe(400);
+    const missing = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/nope/reclean',
+      payload: { style: 'light-clean', model: 'm', temperature: 0.2, mode: 'start' },
+    });
+    expect(missing.statusCode).toBe(404);
+  });
+
+  it('POST artifacts generates summary and key-facts onto the session row', async () => {
+    const summary = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/artifacts',
+      payload: { kind: 'summary', model: 'google/gemini-2.5-flash', temperature: 0.2 },
+    });
+    expect(summary.statusCode).toBe(200);
+    expect(summary.json<SessionArtifactResponse>().session.summaryText).toBe('АРТЕФАКТ');
+
+    const keyFacts = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/artifacts',
+      payload: { kind: 'key-facts', model: 'google/gemini-2.5-flash', temperature: 0.2 },
+    });
+    expect(keyFacts.statusCode).toBe(200);
+    expect(keyFacts.json<SessionArtifactResponse>().session.keyFactsText).toBe('АРТЕФАКТ');
+  });
+
+  it('POST artifacts validates input and unknown sessions', async () => {
+    const badKind = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/job-1/artifacts',
+      payload: { kind: 'light-clean', model: 'm', temperature: 0.2 },
+    });
+    expect(badKind.statusCode).toBe(400);
+    const missing = await app.inject({
+      method: 'POST',
+      url: '/api/sessions/nope/artifacts',
+      payload: { kind: 'summary', model: 'm', temperature: 0.2 },
+    });
+    expect(missing.statusCode).toBe(404);
   });
 });

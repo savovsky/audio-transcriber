@@ -5,6 +5,7 @@ import {
   LLM_MODEL_IDS,
   LLM_TEMPERATURE_OPTIONS,
   PER_BLOCK_CLEANUP_STYLE_IDS,
+  ROLE_VOCABULARY,
   SESSION_STATUS_DISPLAY_NAMES,
 } from './index';
 import type { SessionStatus } from './index';
@@ -33,6 +34,12 @@ describe('shared constants', () => {
   it('defines discrete temperature options including both defaults', () => {
     expect(LLM_TEMPERATURE_OPTIONS).toContain(0.2);
     expect(LLM_TEMPERATURE_OPTIONS).toContain(0.3);
+  });
+
+  it('defines the agreed legal-domain role vocabulary', () => {
+    expect(ROLE_VOCABULARY).toContain('Съдия');
+    expect(ROLE_VOCABULARY).toContain('Свидетел');
+    expect(ROLE_VOCABULARY.length).toBeGreaterThanOrEqual(6);
   });
 
   it('has a Bulgarian display name for every session status', () => {

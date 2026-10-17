@@ -134,6 +134,23 @@ export const LLM_TEMPERATURE_OPTIONS: readonly number[] = [0.0, 0.2, 0.3, 0.4, 0
 export const DEFAULT_CLEANUP_TEMPERATURE = 0.2;
 export const DEFAULT_ROLES_TEMPERATURE = 0.3;
 
+// Speaker-role vocabulary (moved here from server/src/llm/role-vocabulary.ts in
+// POC_M4 — the client needs it for the confirmed-role Autocomplete). It is the
+// default prompt vocabulary for role SUGGESTIONS only; the user always confirms
+// or edits (free text allowed) before anything is applied (AGENTS.md: nothing
+// LLM-suggested is auto-applied). Generic legal-domain terminology — no
+// case-identifying details (privacy rule).
+export const ROLE_VOCABULARY: readonly string[] = [
+  'Съдия',
+  'Прокурор',
+  'Адвокат',
+  'Ищец',
+  'Ответник',
+  'Свидетел',
+  'Вещо лице',
+  'Секретар',
+];
+
 // Bulgarian display names for the session status badge (list + detail pages).
 export const SESSION_STATUS_DISPLAY_NAMES: Readonly<Record<SessionStatus, string>> = {
   uploaded: 'Качен',
@@ -170,16 +187,85 @@ export interface SessionDetailResponse {
   audioUrl: string; // '/api/sessions/<id>/audio' — Range-streamed from the job dir
 }
 
-// PATCH /api/blocks/:id — both text layers are editable (POC_M3). Manual edits
-// deliberately do NOT touch the cleaned_* provenance columns: those describe the
-// LLM run that produced the base text (the regenerate-compare workflow is M4).
+// Identifies one LLM cleanup run — the provenance written to the block's
+// cleaned_* columns (and the settings of a regenerate / re-clean request).
+export interface CleanedRun {
+  model: string;
+  style: PerBlockCleanupStyleId;
+  temperature: number;
+}
+
+// PATCH /api/blocks/:id — both text layers are editable (POC_M3); POC_M4 adds
+// speaker reassignment and the regenerate-apply path. Manual text edits
+// deliberately do NOT touch the cleaned_* provenance columns UNLESS cleanedRun
+// is passed (the apply step of preview-then-apply regenerate — the new text
+// comes from that exact LLM run, so the provenance is accurate).
 export interface BlockUpdateRequest {
   verbatimText?: string;
   cleanedText?: string;
+  speakerId?: string; // reassign to another speaker OF THE SAME SESSION
+  cleanedRun?: CleanedRun; // requires cleanedText — 400 otherwise
 }
 
 export interface BlockUpdateResponse {
   block: TranscriptBlock;
+}
+
+// POST /api/blocks/:id/regenerate — preview-then-apply (POC_M4): returns the
+// candidate cleaned text and persists NOTHING. The apply step is a PATCH with
+// cleanedText + cleanedRun.
+export type BlockRegenerateRequest = CleanedRun;
+
+export interface BlockRegenerateResponse {
+  candidateText: string;
+  run: CleanedRun;
+}
+
+// POST /api/blocks/:id/merge — merge this block into the PREVIOUS one (by
+// orderIndex). The kept block gets the union time range, per-layer text
+// concatenation, the earlier block's speaker, and provenance only when both
+// sides match exactly. Ids are not renumbered — the removed id leaves a gap.
+export interface BlockMergeResponse {
+  block: TranscriptBlock; // the kept (earlier) block, updated
+  removedBlockId: string;
+}
+
+// PATCH /api/speakers/:id — rename and/or role confirmation (POC_M4). Both are
+// explicit user actions: confirmedRole is the only role field the UI treats as
+// final; suggestions stay proposals.
+export interface SpeakerUpdateRequest {
+  label?: string;
+  confirmedRole?: string;
+}
+
+export interface SpeakerUpdateResponse {
+  speaker: Speaker;
+}
+
+// POST /api/sessions/:id/reclean — session-wide re-clean with chosen settings
+// (POC_M4). One batch per call; the client loops until remaining === 0 (UI
+// blocks with a progress count meanwhile). 'start' marks ALL blocks pending
+// first — manual edits to cleanedText are lost (the UI confirms this).
+export interface SessionRecleanRequest extends CleanedRun {
+  mode: 'start' | 'continue';
+}
+
+export interface SessionRecleanResponse {
+  cleanedBlocks: TranscriptBlock[]; // the batch cleaned by THIS call
+  total: number;
+  remaining: number; // 0 = done
+}
+
+// POST /api/sessions/:id/artifacts — generate a session-level artifact
+// (summary / key-facts) from the cleaned transcript (POC_M4).
+export interface SessionArtifactRequest {
+  kind: 'summary' | 'key-facts';
+  model: string;
+  temperature: number;
+}
+
+export interface SessionArtifactResponse {
+  session: Session; // summaryText / keyFactsText updated
 }
 
 // Error shape shared by all API routes.

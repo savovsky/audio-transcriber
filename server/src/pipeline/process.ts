@@ -12,7 +12,7 @@ import {
 } from 'shared';
 import { type AppDatabase, openDatabase } from '../db/database';
 import { BlocksRepo, SessionsRepo, SpeakersRepo, makeBlockId, makeSpeakerId } from '../db/repositories';
-import { cleanBlocks, cleanSingleBlock } from '../llm/cleanup';
+import { buildBatches, cleanBlocks, cleanSingleBlock } from '../llm/cleanup';
 import { getPreset, isPerBlockStyle } from '../llm/cleanup-presets';
 import type { LlmClient } from '../llm/openrouter';
 import { suggestSpeakerRole } from '../llm/roles';
@@ -140,26 +140,50 @@ function buildSessionTranscript(speakers: Speaker[], blocks: TranscriptBlock[]):
   return text;
 }
 
-async function runSessionLevelStyle(ctx: PipelineContext, sessionId: string): Promise<void> {
-  const { db, options } = ctx;
-  const log = options.onProgress ?? (() => {});
-  const sessions = new SessionsRepo(db);
-  const speakers = new SpeakersRepo(db).listBySession(sessionId);
-  const blocks = new BlocksRepo(db).listBySession(sessionId);
-  const preset = getPreset(options.style); // 'summary' | 'key-facts'
-  log(`cleanup: session-level style "${preset.displayName}" over ${blocks.length} block(s)`);
+// Shared by the pipeline (runSessionLevelStyle) and the M4 artifacts route
+// (generateSessionArtifact): one LLM call over the whole transcript, stored on
+// the session row.
+interface SessionStyleRun {
+  db: AppDatabase;
+  llm: LlmClient;
+  sessionId: string;
+  style: 'summary' | 'key-facts';
+  model: string;
+  temperature: number;
+  log: (message: string) => void;
+}
 
-  const output = await options.llm.chat({
-    model: options.model,
-    temperature: options.temperature ?? DEFAULT_CLEANUP_TEMPERATURE,
+async function runSessionStyle(run: SessionStyleRun): Promise<void> {
+  const sessions = new SessionsRepo(run.db);
+  const speakers = new SpeakersRepo(run.db).listBySession(run.sessionId);
+  const blocks = new BlocksRepo(run.db).listBySession(run.sessionId);
+  const preset = getPreset(run.style);
+  run.log(`cleanup: session-level style "${preset.displayName}" over ${blocks.length} block(s)`);
+
+  const output = await run.llm.chat({
+    model: run.model,
+    temperature: run.temperature,
     messages: [
       { role: 'system', content: preset.systemPrompt },
       { role: 'user', content: buildSessionTranscript(speakers, blocks) },
     ],
   });
-  if (options.style === 'summary') sessions.setSummaryText(sessionId, output);
-  else sessions.setKeyFactsText(sessionId, output);
-  log(`cleanup: ${preset.displayName} stored on the session`);
+  if (run.style === 'summary') sessions.setSummaryText(run.sessionId, output);
+  else sessions.setKeyFactsText(run.sessionId, output);
+  run.log(`cleanup: ${preset.displayName} stored on the session`);
+}
+
+async function runSessionLevelStyle(ctx: PipelineContext, sessionId: string): Promise<void> {
+  const { db, options } = ctx;
+  await runSessionStyle({
+    db,
+    llm: options.llm,
+    sessionId,
+    style: options.style as 'summary' | 'key-facts', // caller checked isPerBlockStyle
+    model: options.model,
+    temperature: options.temperature ?? DEFAULT_CLEANUP_TEMPERATURE,
+    log: options.onProgress ?? (() => {}),
+  });
 }
 
 async function runPerBlockCleanup(ctx: PipelineContext, sessionId: string): Promise<number> {
@@ -265,23 +289,89 @@ export async function runProcessing(options: ProcessOptions): Promise<ProcessRes
   }
 }
 
-// Per-block "↻ regenerate" entry point (used by the future UI action).
-export interface RegenerateBlockInput {
-  db: AppDatabase;
+// Per-block "↻ regenerate" (POC_M4): preview-then-apply. The route calls
+// generateBlockCandidate (persists NOTHING); the apply step is a blocks PATCH
+// with cleanedText + cleanedRun.
+export interface GenerateBlockCandidateInput {
   llm: LlmClient;
   block: TranscriptBlock;
   run: { style: PerBlockCleanupStyleId; model: string; temperature: number };
 }
 
-export async function regenerateBlock(input: RegenerateBlockInput): Promise<void> {
-  const { db, llm, block, run } = input;
+export async function generateBlockCandidate(input: GenerateBlockCandidateInput): Promise<string> {
+  const { llm, block, run } = input;
   const result = await cleanSingleBlock(llm, { block, ...run });
   if (!result)
     throw new Error(`Regenerate failed: block ${block.orderIndex} missing from the model response.`);
-  new BlocksRepo(db).setCleaned(block.id, {
-    cleanedText: result.cleanedText,
-    cleanedModel: run.model,
-    cleanedStyle: run.style,
-    cleanedTemperature: run.temperature,
+  return result.cleanedText;
+}
+
+// Session-wide re-clean (POC_M4): ONE batch per call, the client loops until
+// remaining === 0 (blocking UI with a progress count). 'start' marks ALL
+// blocks pending first (manual cleaned-text edits are lost — the UI confirms).
+// The NULL-marker resume semantics are preserved: a crash mid-run leaves the
+// uncleaned blocks pending and the loop simply continues.
+export interface RecleanSessionBatchInput {
+  db: AppDatabase;
+  llm: LlmClient;
+  sessionId: string;
+  run: { style: PerBlockCleanupStyleId; model: string; temperature: number };
+  mode: 'start' | 'continue';
+}
+
+export interface RecleanSessionBatchResult {
+  cleanedBlocks: TranscriptBlock[];
+  total: number;
+  remaining: number;
+}
+
+export async function recleanSessionBatch(
+  input: RecleanSessionBatchInput,
+): Promise<RecleanSessionBatchResult> {
+  const { db, llm, sessionId, run, mode } = input;
+  const blocksRepo = new BlocksRepo(db);
+  if (mode === 'start') blocksRepo.markCleanupPending(sessionId);
+
+  const total = blocksRepo.listBySession(sessionId).length;
+  const pending = blocksRepo.listPendingCleanup(sessionId);
+  const [firstBatch] = buildBatches(pending);
+  const cleaned = firstBatch ? await cleanBlocks(llm, { blocks: firstBatch.blocks, ...run }) : [];
+  const cleanedBlocks: TranscriptBlock[] = [];
+  for (const item of cleaned) {
+    blocksRepo.setCleaned(item.blockId, {
+      cleanedText: item.cleanedText,
+      cleanedModel: run.model,
+      cleanedStyle: run.style,
+      cleanedTemperature: run.temperature,
+    });
+    const block = blocksRepo.get(item.blockId);
+    if (block) cleanedBlocks.push(block);
+  }
+  // NOTE: blocks the model omits from its response stay pending — a 'continue'
+  // call that cleans 0 blocks while remaining > 0 means the model is stuck on
+  // them; the CLIENT must stop the loop there instead of spinning forever.
+  const remaining = blocksRepo.listPendingCleanup(sessionId).length;
+  return { cleanedBlocks, total, remaining };
+}
+
+// Session-level artifact generation for the M4 UI route (summary / key-facts).
+export interface GenerateSessionArtifactInput {
+  db: AppDatabase;
+  llm: LlmClient;
+  sessionId: string;
+  kind: 'summary' | 'key-facts';
+  model: string;
+  temperature: number;
+}
+
+export async function generateSessionArtifact(input: GenerateSessionArtifactInput): Promise<void> {
+  await runSessionStyle({
+    db: input.db,
+    llm: input.llm,
+    sessionId: input.sessionId,
+    style: input.kind,
+    model: input.model,
+    temperature: input.temperature,
+    log: () => {},
   });
 }

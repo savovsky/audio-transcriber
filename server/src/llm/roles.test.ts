@@ -1,7 +1,6 @@
 import type { Speaker, TranscriptBlock } from 'shared';
 import { describe, expect, it } from 'vitest';
 import type { LlmClient } from './openrouter';
-import { ROLE_VOCABULARY } from './role-vocabulary';
 import { buildRoleSample, parseRoleResponse, suggestSpeakerRole } from './roles';
 
 const SPEAKER: Speaker = {
@@ -31,13 +30,7 @@ function block(orderIndex: number, speaker: { speakerId: string; text: string })
   };
 }
 
-describe('ROLE_VOCABULARY', () => {
-  it('is the agreed legal-domain default list', () => {
-    expect(ROLE_VOCABULARY).toContain('Съдия');
-    expect(ROLE_VOCABULARY).toContain('Свидетел');
-    expect(ROLE_VOCABULARY.length).toBeGreaterThanOrEqual(6);
-  });
-});
+// ROLE_VOCABULARY moved to shared (POC_M4) — its test lives in shared/src/index.test.ts.
 
 describe('buildRoleSample', () => {
   const blocks = [

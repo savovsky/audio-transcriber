@@ -163,6 +163,11 @@ export class SpeakersRepo {
     runAll(speakers);
   }
 
+  get(id: string): Speaker | null {
+    const row = this.db.prepare('SELECT * FROM speakers WHERE id = ?').get(id) as SpeakerRow | undefined;
+    return row ? toSpeaker(row) : null;
+  }
+
   listBySession(sessionId: string): Speaker[] {
     const rows = this.db
       .prepare('SELECT * FROM speakers WHERE session_id = ? ORDER BY speaker_index')
@@ -282,5 +287,68 @@ export class BlocksRepo {
 
   setSpeaker(id: string, speakerId: string): void {
     this.db.prepare('UPDATE blocks SET speaker_id = ? WHERE id = ?').run(speakerId, id);
+  }
+
+  // Session-wide re-clean (POC_M4): marks every block pending — the NULL-marker
+  // resume semantics then drive the batched re-clean. Manual edits to
+  // cleaned_text are lost (the UI confirms this before calling 'start').
+  markCleanupPending(sessionId: string): void {
+    this.db
+      .prepare(
+        `UPDATE blocks SET cleaned_text = NULL, cleaned_model = NULL,
+         cleaned_style = NULL, cleaned_temperature = NULL WHERE session_id = ?`,
+      )
+      .run(sessionId);
+  }
+
+  // Merge a block into the PREVIOUS one (highest order_index below it, same
+  // session — gaps from earlier merges don't matter). Kept block: union time
+  // range, per-layer text concatenation with a space (cleaned = NULL if either
+  // side is NULL), the earlier block's speaker, and provenance ONLY when both
+  // sides match exactly (the combined text otherwise no longer comes from one
+  // LLM run). Ids are not renumbered — the removed id leaves a gap.
+  mergeWithPrevious(id: string): { kept: TranscriptBlock; removedId: string } | null {
+    const block = this.get(id);
+    if (!block) return null;
+    const prevRow = this.db
+      .prepare(
+        'SELECT * FROM blocks WHERE session_id = ? AND order_index < ? ORDER BY order_index DESC LIMIT 1',
+      )
+      .get(block.sessionId, block.orderIndex) as BlockRow | undefined;
+    if (!prevRow) return null; // first block — nothing to merge into
+    const prev = toBlock(prevRow);
+
+    const cleanedText =
+      prev.cleanedText !== null && block.cleanedText !== null
+        ? `${prev.cleanedText} ${block.cleanedText}`
+        : null;
+    const hasMatchingProvenance =
+      cleanedText !== null &&
+      prev.cleanedModel === block.cleanedModel &&
+      prev.cleanedStyle === block.cleanedStyle &&
+      prev.cleanedTemperature === block.cleanedTemperature;
+
+    const merge = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `UPDATE blocks SET end_sec = @endSec, verbatim_text = @verbatimText,
+           cleaned_text = @cleanedText, cleaned_model = @cleanedModel,
+           cleaned_style = @cleanedStyle, cleaned_temperature = @cleanedTemperature
+           WHERE id = @id`,
+        )
+        .run({
+          id: prev.id,
+          endSec: block.endSec,
+          verbatimText: `${prev.verbatimText} ${block.verbatimText}`,
+          cleanedText,
+          cleanedModel: hasMatchingProvenance ? prev.cleanedModel : null,
+          cleanedStyle: hasMatchingProvenance ? prev.cleanedStyle : null,
+          cleanedTemperature: hasMatchingProvenance ? prev.cleanedTemperature : null,
+        });
+      this.db.prepare('DELETE FROM blocks WHERE id = ?').run(block.id);
+    });
+    merge();
+    const kept = this.get(prev.id);
+    return kept ? { kept, removedId: block.id } : null;
   }
 }

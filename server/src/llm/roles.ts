@@ -1,6 +1,7 @@
-import type { Speaker, TranscriptBlock } from 'shared';
+import { ROLE_VOCABULARY, type Speaker, type TranscriptBlock } from 'shared';
 import type { LlmClient } from './openrouter';
-import { ROLE_VOCABULARY } from './role-vocabulary';
+
+// ROLE_VOCABULARY lives in shared (the client needs it for the role Autocomplete).
 
 // Speaker-role SUGGESTIONS (proposals only — never auto-applied; the user
 // confirms or edits before anything is final). One LLM call per speaker:

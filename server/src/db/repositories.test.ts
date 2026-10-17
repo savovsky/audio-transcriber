@@ -170,4 +170,79 @@ describe('repositories', () => {
     expect(b.speakerId).toBe(makeSpeakerId('job-1', 0));
     expect(b.verbatimText).toBe('б — ръчна редакция');
   });
+
+  it('markCleanupPending nulls cleaned text + provenance for the session', () => {
+    blocks.setCleaned(makeBlockId('job-1', 0), {
+      cleanedText: 'а — изчистено',
+      cleanedModel: 'google/gemini-2.5-flash',
+      cleanedStyle: 'clean-verbatim',
+      cleanedTemperature: 0.2,
+    });
+    blocks.markCleanupPending('job-1');
+    const all = blocks.listBySession('job-1');
+    expect(all.every((b) => b.cleanedText === null)).toBe(true);
+    expect(all.every((b) => b.cleanedModel === null && b.cleanedStyle === null)).toBe(true);
+    expect(blocks.listPendingCleanup('job-1')).toHaveLength(2);
+  });
+
+  it('mergeWithPrevious: union range, per-layer concat, provenance on exact match', () => {
+    const run = {
+      cleanedModel: 'google/gemini-2.5-flash',
+      cleanedStyle: 'clean-verbatim' as const,
+      cleanedTemperature: 0.2,
+    };
+    blocks.setCleaned(makeBlockId('job-1', 0), { cleanedText: 'а чисто', ...run });
+    blocks.setCleaned(makeBlockId('job-1', 1), { cleanedText: 'б чисто', ...run });
+
+    const result = blocks.mergeWithPrevious(makeBlockId('job-1', 1));
+    expect(result?.removedId).toBe(makeBlockId('job-1', 1));
+    const kept = result?.kept;
+    expect(kept?.id).toBe(makeBlockId('job-1', 0));
+    expect(kept?.startSec).toBe(0);
+    expect(kept?.endSec).toBe(14.5); // union of both ranges
+    expect(kept?.verbatimText).toContain('а');
+    expect(kept?.cleanedText).toBe('а чисто б чисто');
+    expect(kept?.cleanedModel).toBe('google/gemini-2.5-flash'); // provenance kept on match
+    expect(blocks.listBySession('job-1')).toHaveLength(1);
+  });
+
+  it('mergeWithPrevious: provenance nulled on mismatch, cleaned null if either side null', () => {
+    // mismatch case (block 1 was removed by the previous test's merge — re-insert)
+    blocks.insertMany(BLOCKS);
+    blocks.setCleaned(makeBlockId('job-1', 0), {
+      cleanedText: 'а чисто',
+      cleanedModel: 'google/gemini-2.5-flash',
+      cleanedStyle: 'clean-verbatim',
+      cleanedTemperature: 0.2,
+    });
+    blocks.setCleaned(makeBlockId('job-1', 1), {
+      cleanedText: 'б чисто',
+      cleanedModel: 'openai/gpt-4o-mini',
+      cleanedStyle: 'formal-style',
+      cleanedTemperature: 0.7,
+    });
+    const merged = blocks.mergeWithPrevious(makeBlockId('job-1', 1));
+    expect(merged?.kept.cleanedText).toBe('а чисто б чисто');
+    expect(merged?.kept.cleanedModel).toBeNull();
+    expect(merged?.kept.cleanedStyle).toBeNull();
+    expect(merged?.kept.cleanedTemperature).toBeNull();
+
+    // either-side-null case (block 1 was re-created by the previous merge's
+    // removal — re-insert a fresh block after the kept one)
+    blocks.insertMany([{ ...BLOCKS[1], verbatimText: 'в', cleanedText: null }]);
+    const merged2 = blocks.mergeWithPrevious(makeBlockId('job-1', 1));
+    expect(merged2?.kept.cleanedText).toBeNull();
+    expect(merged2?.kept.cleanedModel).toBeNull();
+  });
+
+  it('mergeWithPrevious: keeps the earlier speaker; null on first block / unknown id', () => {
+    blocks.insertMany(BLOCKS);
+    blocks.setSpeaker(makeBlockId('job-1', 0), makeSpeakerId('job-1', 0));
+    blocks.setSpeaker(makeBlockId('job-1', 1), makeSpeakerId('job-1', 1));
+    const merged = blocks.mergeWithPrevious(makeBlockId('job-1', 1));
+    expect(merged?.kept.speakerId).toBe(makeSpeakerId('job-1', 0)); // earlier block's speaker
+
+    expect(blocks.mergeWithPrevious(makeBlockId('job-1', 0))).toBeNull(); // now the first block
+    expect(blocks.mergeWithPrevious('job-1/b99999')).toBeNull(); // unknown id
+  });
 });

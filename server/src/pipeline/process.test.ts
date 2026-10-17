@@ -5,7 +5,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDatabase } from '../db/database';
 import { BlocksRepo, SessionsRepo, SpeakersRepo, makeBlockId, makeSpeakerId } from '../db/repositories';
 import type { LlmClient } from '../llm/openrouter';
-import { runProcessing } from './process';
+import {
+  generateBlockCandidate,
+  generateSessionArtifact,
+  recleanSessionBatch,
+  runProcessing,
+} from './process';
 
 // Synthetic fixture — generic text only (privacy rule).
 const EXPORT = {
@@ -146,6 +151,68 @@ describe('runProcessing (end-to-end, fake LLM)', () => {
     const db = await openDatabase(tmp);
     expect(new SessionsRepo(db).get('session-1')?.summaryText).toBe('СЕСИЙНО РЕЗЮМЕ');
     expect(new BlocksRepo(db).listPendingCleanup('session-1')).toHaveLength(0); // untouched
+    db.close();
+  });
+
+  it('generateBlockCandidate returns the candidate and persists nothing', async () => {
+    const db = await openDatabase(tmp);
+    const block = new BlocksRepo(db).get(makeBlockId('session-1', 0));
+    expect(block).toBeTruthy();
+    const before = block!.cleanedText;
+    const candidate = await generateBlockCandidate({
+      llm: makeFakeLlm([]),
+      block: block!,
+      run: { style: 'light-clean', model: 'openai/gpt-4o-mini', temperature: 0.4 },
+    });
+    expect(candidate).toBe(block!.verbatimText); // the echo fake returns the block text
+    expect(new BlocksRepo(db).get(block!.id)?.cleanedText).toBe(before); // untouched
+    db.close();
+  });
+
+  it('recleanSessionBatch: start marks all pending, cleans one batch; continue idles', async () => {
+    const db = await openDatabase(tmp);
+    const run = { style: 'formal-style' as const, model: 'openai/gpt-4o-mini', temperature: 0.7 };
+    const result = await recleanSessionBatch({
+      db,
+      llm: makeFakeLlm([]),
+      sessionId: 'session-1',
+      run,
+      mode: 'start',
+    });
+    expect(result.total).toBe(3);
+    expect(result.cleanedBlocks).toHaveLength(3); // all blocks fit one batch
+    expect(result.remaining).toBe(0);
+
+    const block0 = new BlocksRepo(db).get(makeBlockId('session-1', 0));
+    expect(block0?.cleanedText).toBe('Добър ден, започваме.');
+    expect(block0?.cleanedModel).toBe('openai/gpt-4o-mini');
+    expect(block0?.cleanedStyle).toBe('formal-style');
+    expect(block0?.cleanedTemperature).toBe(0.7);
+
+    // 'continue' with nothing pending: no-op, zero remaining.
+    const again = await recleanSessionBatch({
+      db,
+      llm: makeFakeLlm([]),
+      sessionId: 'session-1',
+      run,
+      mode: 'continue',
+    });
+    expect(again.cleanedBlocks).toHaveLength(0);
+    expect(again.remaining).toBe(0);
+    db.close();
+  });
+
+  it('generateSessionArtifact writes key-facts to the session row', async () => {
+    const db = await openDatabase(tmp);
+    await generateSessionArtifact({
+      db,
+      llm: makeFakeLlm([]),
+      sessionId: 'session-1',
+      kind: 'key-facts',
+      model: 'google/gemini-2.5-flash',
+      temperature: 0.2,
+    });
+    expect(new SessionsRepo(db).get('session-1')?.keyFactsText).toBe('СЕСИЙНО РЕЗЮМЕ');
     db.close();
   });
 });

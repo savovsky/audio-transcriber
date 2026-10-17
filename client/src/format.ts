@@ -1,4 +1,12 @@
 // Display formatting helpers (pure functions, Bulgarian locale).
+import type { Speaker } from 'shared';
+
+// The display caption everywhere a block references its speaker (POC_M4,
+// decision 5): the confirmed role wins, the diarization label is the fallback.
+export function speakerDisplayName(speaker: Speaker | undefined, fallback: string): string {
+  if (!speaker) return fallback;
+  return speaker.confirmedRole ?? speaker.label;
+}
 
 // 'h:mm:ss' for durations ≥ 1h, else 'm:ss' — block timestamps and durations.
 export function formatTime(totalSec: number | null): string {
