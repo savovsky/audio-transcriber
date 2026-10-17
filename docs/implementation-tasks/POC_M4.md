@@ -2,7 +2,7 @@
 
 Branch: `POC_M4_speaker-panel-editing`. Approved plan:
 `docs/implementation-plans/POC_M4.md` (discussion rounds 1–2, all recommendations
-accepted).
+accepted). Plan commit: `6f0b4ea` (author-approved).
 
 ## Task state
 
