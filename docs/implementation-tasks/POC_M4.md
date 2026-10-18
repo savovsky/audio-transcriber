@@ -70,3 +70,11 @@ display + generate land in M4.
   the first manual pass was a STALE dev server (Oct 16) holding port 3001 —
   tsx watch reloads code but never re-reads `--env-file`; a fresh `npm run dev`
   reports `openrouter: true` and a real regenerate call succeeded.
+- Post-M4 bugfix `1a842a7` — dev startup race: Vite opens the browser before
+  tsx watch has Fastify listening, and the list page fetched once with no
+  retry, so the dead-proxy ECONNREFUSED stuck until F5. Fix: vite proxy targets
+  `127.0.0.1` (Fastify's explicit bind, skips the IPv6 ::1 attempt) +
+  `withRetry()` in the client API layer retries transient failures (network
+  TypeError / 5xx) on the initial health + sessions loads; `fetchHealth` now
+  uses the shared `getJson` wrapper. Next session: the real-user feedback
+  prompt (`feedback-session-prompt.md`, repo root) is still pending.
