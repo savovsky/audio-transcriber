@@ -7,6 +7,7 @@
  Full POC_M4 manual test list (app is running at http://localhost:3000):
 
  A. Speaker panel (people icon, top right)
+
  1. Panel opens/closes; shows all speakers.
  2. Rename a speaker → click outside (blur-saves) → reload page → name persists.
  3. Expand «Предложение: …» → reasoning text shows.

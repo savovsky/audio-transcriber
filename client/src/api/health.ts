@@ -1,9 +1,6 @@
 import type { HealthResponse } from 'shared';
+import { getJson } from './client';
 
-export async function fetchHealth(): Promise<HealthResponse> {
-  const response = await fetch('/api/health');
-  if (!response.ok) {
-    throw new Error(`Health check failed with status ${response.status}`);
-  }
-  return (await response.json()) as HealthResponse;
+export function fetchHealth(): Promise<HealthResponse> {
+  return getJson<HealthResponse>('/api/health');
 }

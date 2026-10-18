@@ -14,6 +14,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import type { HealthResponse, SessionListItem } from 'shared';
+import { withRetry } from '../api/client';
 import { fetchHealth } from '../api/health';
 import { fetchSessions } from '../api/sessions';
 import SessionStatusChip from '../components/SessionStatusChip';
@@ -25,11 +26,13 @@ export default function SessionListPage() {
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<HealthResponse | null>(null);
 
+  // withRetry: the browser opens before tsx watch has the server listening —
+  // retry the initial loads instead of showing a dead error state on startup.
   useEffect(() => {
-    fetchSessions()
+    withRetry(fetchSessions)
       .then((body) => setSessions(body.sessions))
       .catch((err: Error) => setError(err.message));
-    fetchHealth()
+    withRetry(fetchHealth)
       .then(setHealth)
       .catch(() => setHealth(null));
   }, []);

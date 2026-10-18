@@ -14,7 +14,9 @@ export default defineConfig({
     open: true,
     host: true,
     proxy: {
-      '/api': `http://localhost:${API_PORT}`,
+      // Fastify binds 127.0.0.1 explicitly — target it directly so Node never
+      // wastes an attempt on IPv6 ::1 (localhost resolves to ::1 first on Windows).
+      '/api': `http://127.0.0.1:${API_PORT}`,
     },
   },
   plugins: [react()],
